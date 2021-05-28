@@ -6,24 +6,41 @@
             @dragover.prevent 
             @drop.prevent="dropFile"
             :class="{enter: isEnter}">
-            ファイルアップロード
+            ファイルをドロップ
         </div>
         <div>
             <ul>
                 <li v-for="file in files" :key="file.id">{{ file.name }}
                 </li>
+                <table>
+                    <tbody>
+                        <tr v-for="(item) in data" :key="item.id">
+                            <td>{{ item['culumnA'] }}</td>
+                            <td>{{ item['culumnB'] }}</td>
+                            <td>{{ item['culumnC'] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </ul>
         </div>
     </div>
 </template>
 
 <script>
+import axios from 'axios'
 export default {
     data() {
         return {
             isEnter: false,
+            sheet: [],
             files: [],
-            
+            cols: [
+                {name:"culumnA", key:0},
+                {name:"culumnB", key:1},
+                {name:"culumnC", key:2},
+			],
+            // data: ["SheetJS".split(""), "1234567".split("")],
+            data: [],
         };
     },
     methods: {
@@ -38,6 +55,9 @@ export default {
             console.log('DragOver')
         },
         dropFile(event) {
+
+            this.post();
+
             this.files = [...event.dataTransfer.files]
             this.isEnter = false;
             const XLSX = require("xlsx");
@@ -47,7 +67,7 @@ export default {
             console.log('1');
             // ファイルリード（ファイル読み込み後に実行する部分）
             var reader = new FileReader();
-            reader.onload = function (e) {
+            reader.onload = (e) => {
                 console.log('2');
                 // ブラウザからのファイルリード結果を変数に保存
                 var data = e.target.result;
@@ -73,12 +93,37 @@ export default {
                 console.log(workbook);
 
                 console.log('5');
-                var sheet1 = workbook.Sheets["Sheet1"];
-                console.log(sheet1);
+                this.sheet = workbook.Sheets["Sheet1"];
+
+                console.log('6');
+                console.log(this.sheet);
+
+                const rowObj =XLSX.utils.sheet_to_json(this.sheet);	        
+                this.data = rowObj
+                console.log('7');
+                console.log(this.data);
             };
 
             // FileオブジェクトをArrayBufferとしてメモリ上に読み込む。（読み込んだらonload部分を実行する）
             reader.readAsArrayBuffer(file);
+        },
+        async post () {
+            console.log('post');
+            console.log('11');
+            const instance = axios.create({
+                baseURL: 'https://zfzdaza6z7.execute-api.ap-northeast-1.amazonaws.com'
+            })
+            console.log('12');
+            instance.post('/default/teamB', {
+            }).then((response) => {
+                this.result = response.data.body
+                console.log(response.data.body)
+                console.log('Lambda 呼び出し成功！')
+            }).catch((error) => {
+                this.result = error
+                console.log('Lambda 呼び出し失敗！')
+            })
+            console.log('13');
         },
     },
 }
